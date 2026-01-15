@@ -75,15 +75,22 @@ class GameScene extends Phaser.Scene {
             strokeThickness: 8
         }).setOrigin(0.5);
 
-        // Metronome Visualizer
-        this.metronomeDot = this.add.circle(width / 2, 40, 10, 0xFFFFFF);
-        this.tweens.add({
-            targets: this.metronomeDot,
-            scale: 1.5,
-            alpha: 0,
-            duration: 200,
-            paused: true
-        });
+        // Metronome Visualizer - Scrolling Bar
+        const metroWidth = 400;
+        const metroHeight = 40;
+        const metroX = width / 2 - metroWidth / 2;
+        const metroY = 30;
+
+        // Background bar
+        this.add.rectangle(metroX, metroY, metroWidth, metroHeight, 0x333333, 0.5).setOrigin(0);
+        
+        // Center target line
+        this.add.rectangle(width / 2, metroY, 4, metroHeight, 0xFFFFFF, 0.8).setOrigin(0.5, 0);
+
+        // Moving Indicator
+        this.metroIndicator = this.add.rectangle(metroX, metroY, 10, metroHeight, 0x00FFFF).setOrigin(0.5, 0);
+        
+        this.metroBounds = { left: metroX, right: metroX + metroWidth, center: width / 2 };
 
         this.lastBeatTime = this.time.now;
     }
@@ -139,16 +146,19 @@ class GameScene extends Phaser.Scene {
     update(time) {
         if (this.isGameOver) return;
 
-        if (time - this.lastBeatTime >= this.beatDuration) {
-            // Visual Metronome Flash
-            this.metronomeDot.setAlpha(1).setScale(1);
-            this.tweens.add({
-                targets: this.metronomeDot,
-                scale: 1.5,
-                alpha: 0,
-                duration: 200
-            });
+        // Update Metronome Indicator position
+        // Map time since last beat to a horizontal scroll from left to right
+        const timeSinceBeat = time - this.lastBeatTime;
+        const progress = timeSinceBeat / this.beatDuration;
+        
+        // The bar scrolls from left to right, hitting the center exactly on the beat
+        // So at progress 0, it should be at the left. At progress 1 (new beat), it reaches right then resets.
+        // Actually, to make it helpful for timing, let's make it hit the center exactly ON the beat.
+        // We can do a continuous scroll where the center represents the "Perfect" window.
+        this.metroIndicator.x = this.metroBounds.left + (progress * (this.metroBounds.right - this.metroBounds.left));
 
+        if (time - this.lastBeatTime >= this.beatDuration) {
+            // New Beat
             if (this.activeTileIndex !== -1 && !this.hasTypedOnBeat) {
                 this.handleMiss();
             }
@@ -163,6 +173,9 @@ class GameScene extends Phaser.Scene {
             }
 
             this.highlightTile(this.activeTileIndex);
+            
+            // Pulse the center line on beat
+            this.cameras.main.flash(50, 255, 255, 255, true); // subtle flash or just pulse line
         }
     }
 
