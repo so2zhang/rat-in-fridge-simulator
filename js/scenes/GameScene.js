@@ -3,56 +3,19 @@ class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
     }
 
+    init(data) {
         // Level System (Scalable Design) - 5 Levels total
-        // Patterns: 1 = Quarter, 0.5 = Eighth
+        // Balanced BPM: 90 to 140 instead of 100 to 180
         this.levels = [
-            { 
-                id: 1, 
-                bpm: 90, 
-                sets: 3, 
-                damagePerMiss: 10, 
-                pattern: [1, 1, 1, 1, 1, 1, 1, 1],
-                tiles: this.getPool(['APPLE', 'BANANA', 'CHERRY', 'DATE', 'EGG', 'FIG', 'GRAPE', 'HONEY']) 
-            },
-            { 
-                id: 2, 
-                bpm: 100, 
-                sets: 3, 
-                damagePerMiss: 12, 
-                pattern: [1, 1, 0.5, 0.5, 1, 1, 1, 1], // Double note on 3rd tile
-                tiles: this.getPool(['ICE', 'JELLY', 'KIWI', 'LEMON', 'MELON', 'NUT', 'ORANGE', 'PEAR']) 
-            },
-            { 
-                id: 3, 
-                bpm: 110, 
-                sets: 3, 
-                damagePerMiss: 14, 
-                pattern: [1, 1, 1, 1, 1, 1, 0.5, 0.5], // Double note on 7th tile
-                tiles: this.getPool(['QUARTZ', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) 
-            },
-            { 
-                id: 4, 
-                bpm: 120, 
-                sets: 3, 
-                damagePerMiss: 16, 
-                pattern: [1, 0.5, 0.5, 1, 1, 0.5, 0.5, 1], // Syncopated feel
-                tiles: this.getPool(['BREAD', 'CAKE', 'DOUGH', 'FISH', 'GUM', 'HAM', 'JAM', 'KALE']) 
-            },
-            { 
-                id: 5, 
-                bpm: 130, 
-                sets: 3, 
-                damagePerMiss: 18, 
-                pattern: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], // All fast eighths
-                tiles: this.getPool(['MINT', 'OAT', 'PORK', 'SAGE', 'TART', 'VINE', 'WINE', 'ZEST']) 
-            }
+            { id: 1, bpm: 90, sets: 3, damagePerMiss: 10, tiles: this.getPool(['APPLE', 'BANANA', 'CHERRY', 'DATE', 'EGG', 'FIG', 'GRAPE', 'HONEY']) },
+            { id: 2, bpm: 105, sets: 3, damagePerMiss: 12, tiles: this.getPool(['ICE', 'JELLY', 'KIWI', 'LEMON', 'MELON', 'NUT', 'ORANGE', 'PEAR']) },
+            { id: 3, bpm: 120, sets: 3, damagePerMiss: 14, tiles: this.getPool(['QUARTZ', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) },
+            { id: 4, bpm: 130, sets: 3, damagePerMiss: 16, tiles: this.getPool(['BREAD', 'CAKE', 'DOUGH', 'FISH', 'GUM', 'HAM', 'JAM', 'KALE']) },
+            { id: 5, bpm: 140, sets: 3, damagePerMiss: 18, tiles: this.getPool(['MINT', 'OAT', 'PORK', 'SAGE', 'TART', 'VINE', 'WINE', 'ZEST']) }
         ];
 
         this.currentLevelIndex = data.levelIndex || 0;
         this.currentLevel = this.levels[this.currentLevelIndex];
-        
-        // Base beat duration for a quarter note
-        this.baseBeatDuration = (60 / this.currentLevel.bpm) * 1000;
         
         // Shuffle tiles for the first set
         this.activeTileSet = this.shuffleArray([...this.currentLevel.tiles]);
@@ -65,7 +28,7 @@ class GameScene extends Phaser.Scene {
         this.currentSet = 1;
         this.activeTileIndex = -1;
         this.lastBeatTime = 0;
-        this.nextBeatDuration = 0;
+        this.beatDuration = (60 / this.currentLevel.bpm) * 1000;
         this.hasTypedOnBeat = false;
         this.isGameOver = false;
         this.score = data.score || 0;
@@ -172,32 +135,31 @@ class GameScene extends Phaser.Scene {
     update(time) {
         if (this.isGameOver) return;
 
-        // Current beat duration based on the pattern
-        const currentBeatDuration = (this.activeTileIndex >= 0 && this.activeTileIndex < this.currentLevel.pattern.length) 
-            ? this.baseBeatDuration * this.currentLevel.pattern[this.activeTileIndex]
-            : this.baseBeatDuration;
-
-        // Update Bouncing Mouse Metronome
+        // Update Bouncing Ball Metronome
         if (this.activeTileIndex >= 0 && this.activeTileIndex < this.tiles.length) {
             this.metroBall.setAlpha(1);
             const currentTile = this.tiles[this.activeTileIndex];
             
+            // If there's a next tile, interpolate between them
             if (this.activeTileIndex + 1 < this.tiles.length) {
                 const nextTile = this.tiles[this.activeTileIndex + 1];
-                const progress = (time - this.lastBeatTime) / currentBeatDuration;
+                const progress = (time - this.lastBeatTime) / this.beatDuration;
                 
+                // Ease progress to make it look like a "bounce"
+                // Parabolic arc for Y
                 const bounceHeight = 80;
                 const arcY = -Math.sin(progress * Math.PI) * bounceHeight;
                 
                 this.metroBall.x = Phaser.Math.Linear(currentTile.bg.x, nextTile.bg.x, progress);
                 this.metroBall.y = Phaser.Math.Linear(currentTile.bg.y, nextTile.bg.y, progress) + arcY;
             } else {
+                // Stay on last tile until reset
                 this.metroBall.x = currentTile.bg.x;
                 this.metroBall.y = currentTile.bg.y;
             }
         }
 
-        if (time - this.lastBeatTime >= currentBeatDuration) {
+        if (time - this.lastBeatTime >= this.beatDuration) {
             if (this.activeTileIndex !== -1 && !this.hasTypedOnBeat) {
                 this.handleMiss();
             }
@@ -213,6 +175,8 @@ class GameScene extends Phaser.Scene {
             }
 
             this.highlightTile(this.activeTileIndex);
+            
+            // Subtle flash on beat
             this.cameras.main.flash(40, 255, 255, 255, true);
         }
     }
@@ -232,12 +196,7 @@ class GameScene extends Phaser.Scene {
 
         const typed = event.key.toUpperCase();
         const expected = this.activeTileSet[this.activeTileIndex].expectedKey;
-        
-        const currentBeatDuration = (this.activeTileIndex >= 0 && this.activeTileIndex < this.currentLevel.pattern.length) 
-            ? this.baseBeatDuration * this.currentLevel.pattern[this.activeTileIndex]
-            : this.baseBeatDuration;
-
-        const timing = (this.time.now - this.lastBeatTime) / currentBeatDuration;
+        const timing = (this.time.now - this.lastBeatTime) / this.beatDuration;
         
         this.hasTypedOnBeat = true;
 
