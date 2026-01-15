@@ -85,16 +85,17 @@ class GameScene extends Phaser.Scene {
 
     createUI(width, height) {
         // Level & Set Info
-        this.levelText = this.add.text(20, 20, `LEVEL ${this.currentLevel.id}`, { fontSize: '28px', fontWeight: 'bold', color: '#FFFFFF' });
-        this.setText = this.add.text(20, 55, `SET ${this.currentSet}/${this.currentLevel.sets}`, { fontSize: '20px', color: '#AAAAAA' });
-        this.scoreText = this.add.text(20, 85, `SCORE: ${this.score}`, { fontSize: '20px', color: '#FFFFFF' });
+        this.levelText = this.add.text(20, 20, `LEVEL ${this.currentLevel.id}`, { fontSize: '28px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#FFFFFF' });
+        this.setText = this.add.text(20, 55, `SET ${this.currentSet}/${this.currentLevel.sets}`, { fontSize: '20px', fontFamily: 'Comic Sans MS', color: '#AAAAAA' });
+        this.scoreText = this.add.text(20, 85, `SCORE: ${this.score}`, { fontSize: '20px', fontFamily: 'Comic Sans MS', color: '#FFFFFF' });
 
-        // Health Bar
+        // Health Bar (Insulin Level)
         const barWidth = 250;
         const barX = width - barWidth - 20;
         this.add.rectangle(barX, 20, barWidth, 30, 0x333333).setOrigin(0);
-        this.hpBar = this.add.rectangle(barX, 20, barWidth, 30, 0x00FF00).setOrigin(0);
-        this.hpText = this.add.text(barX + barWidth / 2, 35, '100 HP', { fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF' }).setOrigin(0.5);
+        this.hpBar = this.add.rectangle(barX, 20, barWidth, 30, 0xFFFFFF).setOrigin(0);
+        this.add.text(barX, 55, 'INSULIN LEVEL', { fontSize: '14px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#FFFFFF' });
+        this.hpText = this.add.text(barX + barWidth / 2, 35, '100 HP', { fontSize: '16px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#000000' }).setOrigin(0.5);
     }
 
     createGrid(width, height) {
@@ -114,9 +115,9 @@ class GameScene extends Phaser.Scene {
             const tileData = this.activeTileSet[i];
             
             const bg = this.add.rectangle(x, y, tileSize, tileSize, 0x222222, 0.8).setStrokeStyle(4, 0x666666);
-            const word = this.add.text(x, y + 10, tileData.word, { fontSize: '22px', fontWeight: 'bold', color: '#FFFFFF' }).setOrigin(0.5);
-            const key = this.add.text(x, y + 40, `[${tileData.expectedKey}]`, { fontSize: '16px', color: '#FFFF00' }).setOrigin(0.5);
-            const label = this.add.text(x, y - 35, `Slot ${i + 1}`, { fontSize: '14px', color: '#888888' }).setOrigin(0.5);
+            const word = this.add.text(x, y + 10, tileData.word, { fontSize: '22px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#FFFFFF' }).setOrigin(0.5);
+            const key = this.add.text(x, y + 40, `[${tileData.expectedKey}]`, { fontSize: '16px', fontFamily: 'Comic Sans MS', color: '#FFFF00' }).setOrigin(0.5);
+            const label = this.add.text(x, y - 35, `Slot ${i + 1}`, { fontSize: '14px', fontFamily: 'Comic Sans MS', color: '#888888' }).setOrigin(0.5);
 
             this.tiles.push({ bg, word, key, label, data: tileData });
         }
@@ -268,19 +269,19 @@ class GameScene extends Phaser.Scene {
     triggerGameOver() {
         this.isGameOver = true;
         this.add.rectangle(0, 0, 800, 600, 0x000000, 0.8).setOrigin(0);
-        this.add.text(400, 250, 'GAME OVER', { fontSize: '64px', fontWeight: 'bold', color: '#FF0000' }).setOrigin(0.5);
-        const btn = this.add.text(400, 350, 'RESTART', { fontSize: '32px', color: '#FFFFFF', backgroundColor: '#444444', padding: 15 }).setOrigin(0.5).setInteractive();
+        this.add.text(400, 250, 'GAME OVER', { fontSize: '64px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#FF0000' }).setOrigin(0.5);
+        const btn = this.add.text(400, 350, 'RESTART', { fontSize: '32px', fontFamily: 'Comic Sans MS', color: '#FFFFFF', backgroundColor: '#444444', padding: 15 }).setOrigin(0.5).setInteractive();
         btn.on('pointerdown', () => this.scene.restart({ levelIndex: 0, score: 0 }));
     }
 
     showEnding() {
         this.isGameOver = true;
         this.add.rectangle(0, 0, 800, 600, 0x000000, 0.9).setOrigin(0);
-        this.add.text(400, 200, 'CHALLENGE COMPLETE', { fontSize: '48px', fontWeight: 'bold', color: '#FFFF00' }).setOrigin(0.5);
-        this.add.text(400, 280, `FINAL SCORE: ${this.score}`, { fontSize: '32px', color: '#FFFFFF' }).setOrigin(0.5);
-        this.add.text(400, 350, 'You got Maya\'s attention!', { fontSize: '24px', color: '#00FF00' }).setOrigin(0.5);
+        this.add.text(400, 200, 'CHALLENGE COMPLETE', { fontSize: '48px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#FFFF00' }).setOrigin(0.5);
+        this.add.text(400, 280, `FINAL SCORE: ${this.score}`, { fontSize: '32px', fontFamily: 'Comic Sans MS', color: '#FFFFFF' }).setOrigin(0.5);
+        this.add.text(400, 350, 'You got Maya\'s attention!', { fontSize: '24px', fontFamily: 'Comic Sans MS', color: '#00FF00' }).setOrigin(0.5);
         
-        const btn = this.add.text(400, 450, 'CONTINUE', { fontSize: '28px', color: '#FFFFFF', backgroundColor: '#222222', padding: 15 }).setOrigin(0.5).setInteractive();
+        const btn = this.add.text(400, 450, 'CONTINUE', { fontSize: '28px', fontFamily: 'Comic Sans MS', color: '#FFFFFF', backgroundColor: '#222222', padding: 15 }).setOrigin(0.5).setInteractive();
         btn.on('pointerdown', () => this.scene.start('EndingStoryScene'));
     }
 }
