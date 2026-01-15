@@ -1,0 +1,96 @@
+🎮 Enhanced Game Generation Prompt (Typing Rhythm Game)
+
+Create a browser-based rhythm typing game inspired by the viral “Say the Word on Beat” challenge, with a health system and scalable level design.
+
+The game displays 8 square tiles arranged in a 4×2 grid. Each tile represents an item, but all tiles use placeholder frames (e.g., blank cards labeled “Slot 1–8”). The system must be designed so tile images and associated words/letters can be swapped in later on a per-level basis.
+
+A steady rhythmic beat plays. On each beat, one tile highlights in sequence. While a tile is highlighted, the player must type the correct input (preferably the first letter of the tile’s associated word) within the beat window.
+
+Core Mechanics
+
+One tile highlights per beat.
+
+The player types a key during the active beat window.
+
+Input is evaluated for:
+
+Correct key
+
+Correct timing
+
+Results per beat:
+
+Perfect
+
+Late/Early
+
+Miss
+
+Health System
+
+The player starts each level with a fixed amount of health (HP) (e.g., 100).
+
+Every incorrect input (wrong key, early, late, or no input) reduces health by a configurable amount (e.g., −10 HP).
+
+Health is displayed clearly in the UI (bar or numeric).
+
+When health reaches 0, the game ends immediately with a Game Over state.
+
+Health loss values should be configurable per difficulty or level.
+
+Level System (Scalable Design)
+
+The game should support multiple levels, where each level defines:
+
+Tile word/letter mappings
+
+Placeholder image references (to be replaced later)
+
+Beat tempo (BPM)
+
+Health loss per mistake
+
+Tile order behavior (fixed, looped, or shuffled)
+
+Levels should be represented as data objects, not hardcoded logic.
+
+Example structure (conceptual):
+
+level = {
+  bpm,
+  tiles: [
+    { id, placeholderImage, expectedKey },
+    ...
+  ],
+  damagePerMiss
+}
+
+Visual Design
+
+Tiles are square, evenly spaced, and minimal.
+
+Placeholder frames clearly indicate future image slots.
+
+Active tiles are highlighted with glow, outline, or scale.
+
+UI
+
+Health bar or HP counter
+
+Beat feedback (“Perfect”, “Miss”, etc.)
+
+Current level indicator
+
+Game Over screen with restart option
+
+Technical Constraints
+
+Implemented using HTML, CSS, and JavaScript
+
+No external assets required
+
+No real images — only placeholders
+
+Architecture should allow easy expansion to new levels and assets
+
+The final result should feel fast, tense, and replayable, where mistakes are punished through health loss, encouraging rhythm accuracy while remaining extensible for future content.
