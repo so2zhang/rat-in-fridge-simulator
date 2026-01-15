@@ -5,16 +5,20 @@ class GameScene extends Phaser.Scene {
 
     init(data) {
         // Level System (Scalable Design) - 5 Levels total
+        // Balanced BPM: 90 to 140 instead of 100 to 180
         this.levels = [
-            { id: 1, bpm: 100, sets: 3, damagePerMiss: 10, tiles: this.generateTiles(['APPLE', 'BANANA', 'CHERRY', 'DATE', 'EGG', 'FIG', 'GRAPE', 'HONEY']) },
-            { id: 2, bpm: 120, sets: 3, damagePerMiss: 12, tiles: this.generateTiles(['ICE', 'JELLY', 'KIWI', 'LEMON', 'MELON', 'NUT', 'ORANGE', 'PEAR']) },
-            { id: 3, bpm: 140, sets: 3, damagePerMiss: 15, tiles: this.generateTiles(['QUARTZ', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) },
-            { id: 4, bpm: 160, sets: 3, damagePerMiss: 18, tiles: this.generateTiles(['BREAD', 'CAKE', 'DOUGH', 'FISH', 'GUM', 'HAM', 'JAM', 'KALE']) },
-            { id: 5, bpm: 180, sets: 3, damagePerMiss: 20, tiles: this.generateTiles(['MINT', 'OAT', 'PORK', 'SAGE', 'TART', 'VINE', 'WINE', 'ZEST']) }
+            { id: 1, bpm: 90, sets: 3, damagePerMiss: 10, tiles: this.getPool(['APPLE', 'BANANA', 'CHERRY', 'DATE', 'EGG', 'FIG', 'GRAPE', 'HONEY']) },
+            { id: 2, bpm: 105, sets: 3, damagePerMiss: 12, tiles: this.getPool(['ICE', 'JELLY', 'KIWI', 'LEMON', 'MELON', 'NUT', 'ORANGE', 'PEAR']) },
+            { id: 3, bpm: 120, sets: 3, damagePerMiss: 14, tiles: this.getPool(['QUARTZ', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) },
+            { id: 4, bpm: 130, sets: 3, damagePerMiss: 16, tiles: this.getPool(['BREAD', 'CAKE', 'DOUGH', 'FISH', 'GUM', 'HAM', 'JAM', 'KALE']) },
+            { id: 5, bpm: 140, sets: 3, damagePerMiss: 18, tiles: this.getPool(['MINT', 'OAT', 'PORK', 'SAGE', 'TART', 'VINE', 'WINE', 'ZEST']) }
         ];
 
         this.currentLevelIndex = data.levelIndex || 0;
         this.currentLevel = this.levels[this.currentLevelIndex];
+        
+        // Shuffle tiles for the first set
+        this.activeTileSet = this.shuffleArray([...this.currentLevel.tiles]);
         
         // Health System (Resets per level, carries over per set)
         this.hp = 100;
@@ -30,12 +34,20 @@ class GameScene extends Phaser.Scene {
         this.score = data.score || 0;
     }
 
-    generateTiles(words) {
+    getPool(words) {
         return words.map((word, i) => ({
             id: i,
             word: word,
             expectedKey: word[0].toUpperCase()
         }));
+    }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     }
 
     create() {
@@ -62,6 +74,16 @@ class GameScene extends Phaser.Scene {
             stroke: '#000000',
             strokeThickness: 8
         }).setOrigin(0.5);
+
+        // Metronome Visualizer
+        this.metronomeDot = this.add.circle(width / 2, 40, 10, 0xFFFFFF);
+        this.tweens.add({
+            targets: this.metronomeDot,
+            scale: 1.5,
+            alpha: 0,
+            duration: 200,
+            paused: true
+        });
 
         this.lastBeatTime = this.time.now;
     }
@@ -94,7 +116,7 @@ class GameScene extends Phaser.Scene {
             const x = startX + col * (tileSize + spacing);
             const y = startY + row * (tileSize + spacing);
 
-            const tileData = this.currentLevel.tiles[i];
+            const tileData = this.activeTileSet[i];
             
             const bg = this.add.rectangle(x, y, tileSize, tileSize, 0x222222, 0.8).setStrokeStyle(4, 0x666666);
             const word = this.add.text(x, y + 10, tileData.word, { fontSize: '22px', fontWeight: 'bold', color: '#FFFFFF' }).setOrigin(0.5);
@@ -105,10 +127,28 @@ class GameScene extends Phaser.Scene {
         }
     }
 
+    updateTiles() {
+        this.tiles.forEach((tile, i) => {
+            const newData = this.activeTileSet[i];
+            tile.data = newData;
+            tile.word.setText(newData.word);
+            tile.key.setText(`[${newData.expectedKey}]`);
+        });
+    }
+
     update(time) {
         if (this.isGameOver) return;
 
         if (time - this.lastBeatTime >= this.beatDuration) {
+            // Visual Metronome Flash
+            this.metronomeDot.setAlpha(1).setScale(1);
+            this.tweens.add({
+                targets: this.metronomeDot,
+                scale: 1.5,
+                alpha: 0,
+                duration: 200
+            });
+
             if (this.activeTileIndex !== -1 && !this.hasTypedOnBeat) {
                 this.handleMiss();
             }
@@ -140,7 +180,7 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver || this.activeTileIndex < 0 || this.hasTypedOnBeat) return;
 
         const typed = event.key.toUpperCase();
-        const expected = this.currentLevel.tiles[this.activeTileIndex].expectedKey;
+        const expected = this.activeTileSet[this.activeTileIndex].expectedKey;
         const timing = (this.time.now - this.lastBeatTime) / this.beatDuration;
         
         this.hasTypedOnBeat = true;
@@ -191,6 +231,8 @@ class GameScene extends Phaser.Scene {
             this.completeLevel();
         } else {
             this.activeTileIndex = -1;
+            this.activeTileSet = this.shuffleArray([...this.currentLevel.tiles]);
+            this.updateTiles();
             this.setText.setText(`SET ${this.currentSet}/${this.currentLevel.sets}`);
         }
     }
