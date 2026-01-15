@@ -16,7 +16,7 @@ class GameScene extends Phaser.Scene {
         this.levels = [
             { id: 1, bpm: 90, sets: 3, damagePerMiss: 10, tiles: this.getPool(['APPLE', 'BANANA', 'CHERRY', 'DATE', 'EGG', 'FIG', 'GRAPE', 'HONEY']) },
             { id: 2, bpm: 105, sets: 3, damagePerMiss: 12, tiles: this.getPool(['ICE', 'JELLY', 'KIWI', 'LEMON', 'MELON', 'NUT', 'ORANGE', 'PEAR']) },
-            { id: 3, bpm: 120, sets: 3, damagePerMiss: 14, tiles: this.getPool(['QUARTZ', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) },
+            { id: 3, bpm: 120, sets: 3, damagePerMiss: 14, tiles: this.getPool(['RADISH', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) },
             { id: 4, bpm: 130, sets: 3, damagePerMiss: 16, tiles: this.getPool(['BREAD', 'CAKE', 'DOUGH', 'FISH', 'GUM', 'HAM', 'JAM', 'KALE']) },
             { id: 5, bpm: 140, sets: 3, damagePerMiss: 18, tiles: this.getPool(['MINT', 'OAT', 'PORK', 'SAGE', 'TART', 'VINE', 'WINE', 'ZEST']) }
         ];
@@ -281,6 +281,7 @@ class GameScene extends Phaser.Scene {
 
     showFeedback(text, color) {
         this.feedbackText.setText(text).setColor(color).setAlpha(1).setScale(1.2);
+        this.feedbackText.y = this.scale.height - 150; // Reset Y position to fixed baseline
         this.tweens.add({ targets: this.feedbackText, alpha: 0, y: '-=30', duration: 400 });
     }
 
