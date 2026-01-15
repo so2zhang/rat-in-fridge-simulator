@@ -3,6 +3,13 @@ class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
     }
 
+    /**
+     * Level System Initialization: Defines the progression, BPM, and difficulty.
+     * To change the rhythm/difficulty:
+     * - Adjust 'bpm': Higher is faster.
+     * - Adjust 'sets': Number of grid rounds per level.
+     * - Adjust 'damagePerMiss': Health penalty for errors.
+     */
     init(data) {
         // Level System (Scalable Design) - 5 Levels total
         // Balanced BPM: 90 to 140 instead of 100 to 180
@@ -65,8 +72,8 @@ class GameScene extends Phaser.Scene {
         // Inputs
         this.input.keyboard.on('keydown', this.handleInput, this);
 
-        // Feedback Text
-        this.feedbackText = this.add.text(width / 2, height - 80, '', {
+        // Feedback Text - Lowered position to avoid being off-screen
+        this.feedbackText = this.add.text(width / 2, height - 150, '', {
             fontSize: '56px',
             fontFamily: 'Comic Sans MS',
             fontWeight: 'bold',
@@ -83,13 +90,17 @@ class GameScene extends Phaser.Scene {
         this.lastBeatTime = this.time.now;
     }
 
+    /**
+     * UI Setup: Defines health bar (Insulin Level) and status indicators.
+     * To change colors or fonts, modify the styles here.
+     */
     createUI(width, height) {
         // Level & Set Info
         this.levelText = this.add.text(20, 20, `LEVEL ${this.currentLevel.id}`, { fontSize: '28px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#FFFFFF' });
         this.setText = this.add.text(20, 55, `SET ${this.currentSet}/${this.currentLevel.sets}`, { fontSize: '20px', fontFamily: 'Comic Sans MS', color: '#AAAAAA' });
         this.scoreText = this.add.text(20, 85, `SCORE: ${this.score}`, { fontSize: '20px', fontFamily: 'Comic Sans MS', color: '#FFFFFF' });
 
-        // Health Bar (Insulin Level)
+        // Health Bar (Insulin Level) - White bar on dark background
         const barWidth = 250;
         const barX = width - barWidth - 20;
         this.add.rectangle(barX, 20, barWidth, 30, 0x333333).setOrigin(0);
@@ -98,6 +109,13 @@ class GameScene extends Phaser.Scene {
         this.hpText = this.add.text(barX + barWidth / 2, 35, '100 HP', { fontSize: '16px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#000000' }).setOrigin(0.5);
     }
 
+    /**
+     * Grid Creation: Generates the 4x2 grid.
+     * To add images to cards:
+     * 1. Preload images in init() or TitleScene.js.
+     * 2. Add an 'imageKey' property to the level data objects in init().
+     * 3. Inside the loop below, use this.add.image(x, y, tileData.imageKey).
+     */
     createGrid(width, height) {
         this.tiles = [];
         const gridCols = 4;
