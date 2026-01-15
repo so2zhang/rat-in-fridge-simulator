@@ -8,7 +8,7 @@ class GameScene extends Phaser.Scene {
         this.levels = [
             {
                 id: 1,
-                bpm: 120,
+                bpm: 100,
                 damagePerMiss: 10,
                 tiles: [
                     { id: 0, word: 'APPLE', expectedKey: 'A' },
@@ -19,6 +19,21 @@ class GameScene extends Phaser.Scene {
                     { id: 5, word: 'FIG', expectedKey: 'F' },
                     { id: 6, word: 'GRAPE', expectedKey: 'G' },
                     { id: 7, word: 'HONEY', expectedKey: 'H' }
+                ]
+            },
+            {
+                id: 2,
+                bpm: 130,
+                damagePerMiss: 15,
+                tiles: [
+                    { id: 0, word: 'ICE', expectedKey: 'I' },
+                    { id: 1, word: 'JELLY', expectedKey: 'J' },
+                    { id: 2, word: 'KIWI', expectedKey: 'K' },
+                    { id: 3, word: 'LEMON', expectedKey: 'L' },
+                    { id: 4, word: 'MELON', expectedKey: 'M' },
+                    { id: 5, word: 'NUT', expectedKey: 'N' },
+                    { id: 6, word: 'ORANGE', expectedKey: 'O' },
+                    { id: 7, word: 'PEAR', expectedKey: 'P' }
                 ]
             }
         ];
@@ -35,10 +50,14 @@ class GameScene extends Phaser.Scene {
         this.beatDuration = (60 / this.currentLevel.bpm) * 1000;
         this.hasTypedOnBeat = false;
         this.isGameOver = false;
+        this.score = 0;
     }
 
     create() {
         const { width, height } = this.scale;
+
+        // Background
+        this.add.image(width / 2, height / 2, 'fridge_bg').setAlpha(0.3).setScale(Math.max(width / 800, height / 600));
 
         // UI - Health Bar
         this.createUI(width, height);
@@ -47,8 +66,8 @@ class GameScene extends Phaser.Scene {
         this.tiles = [];
         const gridCols = 4;
         const gridRows = 2;
-        const tileSize = 120;
-        const spacing = 20;
+        const tileSize = 130;
+        const spacing = 30;
         const startX = width / 2 - ((gridCols * tileSize + (gridCols - 1) * spacing) / 2) + tileSize / 2;
         const startY = height / 2 - ((gridRows * tileSize + (gridRows - 1) * spacing) / 2) + tileSize / 2;
 
@@ -67,13 +86,21 @@ class GameScene extends Phaser.Scene {
         this.input.keyboard.on('keydown', this.handleInput, this);
 
         // Feedback Text
-        this.feedbackText = this.add.text(width / 2, height - 100, '', {
-            fontSize: '48px',
-            fontFamily: 'Arial',
+        this.feedbackText = this.add.text(width / 2, height - 80, '', {
+            fontSize: '56px',
+            fontFamily: 'Comic Sans MS',
+            fontWeight: 'bold',
             color: '#00FF00',
             stroke: '#000000',
-            strokeThickness: 6
+            strokeThickness: 8
         }).setOrigin(0.5);
+
+        // Score Text
+        this.scoreText = this.add.text(20, 60, `SCORE: ${this.score}`, {
+            fontSize: '24px',
+            fontFamily: 'Arial',
+            color: '#FFFFFF'
+        });
 
         // Start rhythm logic
         this.lastBeatTime = this.time.now;
@@ -82,14 +109,15 @@ class GameScene extends Phaser.Scene {
     createUI(width, height) {
         // Level Indicator
         this.add.text(20, 20, `LEVEL ${this.currentLevel.id}`, {
-            fontSize: '24px',
+            fontSize: '28px',
             fontFamily: 'Arial',
+            fontWeight: 'bold',
             color: '#FFFFFF'
         });
 
         // Health Bar Background
         const barWidth = 300;
-        const barHeight = 30;
+        const barHeight = 35;
         const barX = width - barWidth - 20;
         const barY = 20;
 
@@ -99,27 +127,36 @@ class GameScene extends Phaser.Scene {
         this.hpText = this.add.text(barX + barWidth / 2, barY + barHeight / 2, 'HP: 100', {
             fontSize: '18px',
             fontFamily: 'Arial',
+            fontWeight: 'bold',
             color: '#FFFFFF'
         }).setOrigin(0.5);
     }
 
     createTile(x, y, size, data) {
         // Placeholder frame
-        const bg = this.add.rectangle(x, y, size, size, 0x444444);
-        bg.setStrokeStyle(4, 0x888888);
+        const bg = this.add.rectangle(x, y, size, size, 0x222222, 0.8);
+        bg.setStrokeStyle(4, 0x666666);
 
-        const label = this.add.text(x, y - 20, `Slot ${data.id + 1}`, {
+        const label = this.add.text(x, y - 30, `Slot ${data.id + 1}`, {
             fontSize: '16px',
-            color: '#AAAAAA'
+            color: '#888888',
+            fontFamily: 'Arial'
         }).setOrigin(0.5);
 
-        const wordText = this.add.text(x, y + 20, data.word, {
-            fontSize: '20px',
+        const wordText = this.add.text(x, y + 10, data.word, {
+            fontSize: '24px',
             fontWeight: 'bold',
-            color: '#FFFFFF'
+            color: '#FFFFFF',
+            fontFamily: 'Arial'
         }).setOrigin(0.5);
 
-        return { bg, label, wordText, data };
+        const keyText = this.add.text(x, y + 40, `[${data.expectedKey}]`, {
+            fontSize: '18px',
+            color: '#FFFF00',
+            fontFamily: 'Courier New'
+        }).setOrigin(0.5);
+
+        return { bg, label, wordText, keyText, data };
     }
 
     update(time, delta) {
@@ -140,12 +177,18 @@ class GameScene extends Phaser.Scene {
             // Highlight new tile
             this.tiles.forEach((tile, index) => {
                 if (index === this.activeTileIndex) {
-                    tile.bg.setFillStyle(0x6666FF);
+                    this.tweens.add({
+                        targets: tile.bg,
+                        scale: 1.15,
+                        duration: 100,
+                        yoyo: true,
+                        ease: 'Back.easeOut'
+                    });
+                    tile.bg.setFillStyle(0x4444FF);
                     tile.bg.setStrokeStyle(6, 0xFFFFFF);
-                    tile.bg.setScale(1.1);
                 } else {
-                    tile.bg.setFillStyle(0x444444);
-                    tile.bg.setStrokeStyle(4, 0x888888);
+                    tile.bg.setFillStyle(0x222222);
+                    tile.bg.setStrokeStyle(4, 0x666666);
                     tile.bg.setScale(1.0);
                 }
             });
@@ -165,16 +208,26 @@ class GameScene extends Phaser.Scene {
 
         if (typedKey === expectedKey) {
             // Correct key
-            if (timingRatio < 0.3) {
-                this.showFeedback('Perfect', '#00FF00');
-            } else if (timingRatio < 0.7) {
-                this.showFeedback('Early/Late', '#FFFF00');
+            if (timingRatio < 0.25 || timingRatio > 0.75) {
+                this.showFeedback('PERFECT', '#00FF00');
+                this.score += 100;
             } else {
-                this.showFeedback('Perfect', '#00FF00'); // Snapping to next beat window logic can be added
+                this.showFeedback('GREAT', '#FFFF00');
+                this.score += 50;
             }
+            this.scoreText.setText(`SCORE: ${this.score}`);
+            
+            // Visual success on tile
+            const activeTile = this.tiles[this.activeTileIndex];
+            this.tweens.add({
+                targets: activeTile.bg,
+                alpha: 0.5,
+                duration: 100,
+                yoyo: true
+            });
         } else {
             // Wrong key
-            this.showFeedback('Wrong!', '#FF0000');
+            this.showFeedback('WRONG KEY', '#FF0000');
             this.reduceHealth(this.currentLevel.damagePerMiss);
         }
     }
@@ -183,14 +236,16 @@ class GameScene extends Phaser.Scene {
         this.feedbackText.setText(text);
         this.feedbackText.setColor(color);
         this.feedbackText.setAlpha(1);
+        this.feedbackText.setScale(1.5);
         
         this.tweens.add({
             targets: this.feedbackText,
             alpha: 0,
-            y: this.feedbackText.y - 20,
-            duration: 500,
+            scale: 1,
+            y: this.feedbackText.y - 40,
+            duration: 400,
             onComplete: () => {
-                this.feedbackText.y += 20;
+                this.feedbackText.y += 40;
             }
         });
     }
@@ -198,8 +253,24 @@ class GameScene extends Phaser.Scene {
     reduceHealth(amount) {
         this.hp = Math.max(0, this.hp - amount);
         const ratio = this.hp / this.maxHp;
-        this.hpBar.width = 300 * ratio;
+        
+        this.tweens.add({
+            targets: this.hpBar,
+            width: 300 * ratio,
+            duration: 200,
+            ease: 'Power2'
+        });
+
         this.hpText.setText(`HP: ${this.hp}`);
+
+        if (this.hp <= 30) {
+            this.hpBar.setFillStyle(0xFF0000);
+        } else if (this.hp <= 60) {
+            this.hpBar.setFillStyle(0xFFFF00);
+        }
+
+        // Screen shake on damage
+        this.cameras.main.shake(150, 0.01);
 
         if (this.hp <= 0) {
             this.triggerGameOver();
@@ -210,21 +281,34 @@ class GameScene extends Phaser.Scene {
         this.isGameOver = true;
         const { width, height } = this.scale;
 
-        this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
+        this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
 
-        this.add.text(width / 2, height / 2 - 50, 'GAME OVER', {
-            fontSize: '64px',
-            fontFamily: 'Arial',
-            color: '#FF0000'
+        this.add.text(width / 2, height / 2 - 80, 'GAME OVER', {
+            fontSize: '84px',
+            fontFamily: 'Comic Sans MS',
+            fontWeight: 'bold',
+            color: '#FF0000',
+            stroke: '#FFFFFF',
+            strokeThickness: 4
         }).setOrigin(0.5);
 
-        const restartButton = this.add.text(width / 2, height / 2 + 50, 'RESTART', {
+        this.add.text(width / 2, height / 2, `FINAL SCORE: ${this.score}`, {
             fontSize: '32px',
             fontFamily: 'Arial',
+            color: '#FFFFFF'
+        }).setOrigin(0.5);
+
+        const restartButton = this.add.text(width / 2, height / 2 + 100, 'TRY AGAIN', {
+            fontSize: '32px',
+            fontFamily: 'Arial',
+            fontWeight: 'bold',
             color: '#FFFFFF',
-            backgroundColor: '#444444',
-            padding: { x: 20, y: 10 }
+            backgroundColor: '#FF0000',
+            padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setInteractive();
+
+        restartButton.on('pointerover', () => restartButton.setScale(1.1));
+        restartButton.on('pointerout', () => restartButton.setScale(1.0));
 
         restartButton.on('pointerdown', () => {
             this.scene.restart();
