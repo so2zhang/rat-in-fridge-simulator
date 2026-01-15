@@ -75,9 +75,9 @@ class GameScene extends Phaser.Scene {
             strokeThickness: 8
         }).setOrigin(0.5);
 
-        // Metronome Visualizer - Bouncing Ball
-        this.metroBall = this.add.circle(0, 0, 12, 0x00FFFF, 1).setDepth(10);
-        this.metroBall.setStrokeStyle(3, 0xFFFFFF);
+        // Metronome Visualizer - Bouncing Mouse
+        this.metroBall = this.add.image(0, 0, 'rat').setDepth(10);
+        this.metroBall.setScale(0.3);
         this.metroBall.setAlpha(0); // Hidden until game starts
 
         this.lastBeatTime = this.time.now;
@@ -279,7 +279,116 @@ class GameScene extends Phaser.Scene {
         this.add.text(400, 200, 'CHALLENGE COMPLETE', { fontSize: '48px', fontWeight: 'bold', color: '#FFFF00' }).setOrigin(0.5);
         this.add.text(400, 280, `FINAL SCORE: ${this.score}`, { fontSize: '32px', color: '#FFFFFF' }).setOrigin(0.5);
         this.add.text(400, 350, 'You got Maya\'s attention!', { fontSize: '24px', color: '#00FF00' }).setOrigin(0.5);
-        const btn = this.add.text(400, 450, 'PLAY AGAIN', { fontSize: '28px', color: '#FFFFFF', backgroundColor: '#222222', padding: 15 }).setOrigin(0.5).setInteractive();
-        btn.on('pointerdown', () => this.scene.start('TitleScene'));
+        
+        const btn = this.add.text(400, 450, 'CONTINUE', { fontSize: '28px', color: '#FFFFFF', backgroundColor: '#222222', padding: 15 }).setOrigin(0.5).setInteractive();
+        btn.on('pointerdown', () => this.scene.start('EndingStoryScene'));
+    }
+}
+
+class EndingStoryScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'EndingStoryScene' });
+    }
+
+    create() {
+        const { width, height } = this.scale;
+
+        this.cards = [
+            {
+                key: 'card3_fridge_neutral',
+                textX: 0.05,
+                textY: 0.1,
+                text:
+                    'Maya hears a frantic scratching.\n' +
+                    'She opens the fridge.\n' +
+                    'Noodle is shivering but safe.\n' +
+                    'He made it.'
+            },
+            {
+                key: 'card1_dorm',
+                textX: 0.05,
+                textY: 0.8,
+                text:
+                    'Back in the dorm.\n' +
+                    'Warm blankets. Insulin.\n' +
+                    'Noodle curls up by the pasta bowl.\n' +
+                    'A well-deserved nap.'
+            }
+        ];
+
+        this.currentIndex = 0;
+        this.currentBg = null;
+        this.textLines = [];
+        this.textLineBackgrounds = [];
+        this.canAdvance = false;
+
+        this.textStyle = {
+            fontSize: '22px',
+            fontFamily: 'Comic Sans MS',
+            fontStyle: 'italic',
+            color: '#FFFFFF',
+            align: 'left'
+        };
+
+        this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.spaceKey.on('down', () => {
+            if (this.canAdvance) this.advanceCard();
+        });
+
+        this.showCard(0);
+    }
+
+    showCard(index) {
+        const { width, height } = this.scale;
+        const card = this.cards[index];
+        this.canAdvance = false;
+
+        if (this.currentBg) this.currentBg.destroy();
+        this.currentBg = this.add.image(width / 2, height / 2, card.key);
+        const scale = Math.max(width / this.currentBg.width, height / this.currentBg.height);
+        this.currentBg.setScale(scale);
+
+        this._buildTextLines(card.text, card.textX, card.textY);
+
+        this.tweens.add({
+            targets: [...this.textLineBackgrounds, ...this.textLines],
+            alpha: 1,
+            duration: 500,
+            onComplete: () => {
+                this.time.delayedCall(500, () => { this.canAdvance = true; });
+            }
+        });
+    }
+
+    advanceCard() {
+        if (this.currentIndex >= this.cards.length - 1) {
+            this.scene.start('TitleScene');
+            return;
+        }
+
+        this.currentIndex++;
+        this.showCard(this.currentIndex);
+    }
+
+    _buildTextLines(text, normX, normY) {
+        const { width, height } = this.scale;
+        this.textLines.forEach(t => t.destroy());
+        this.textLineBackgrounds.forEach(r => r.destroy());
+        this.textLines = [];
+        this.textLineBackgrounds = [];
+
+        const lines = text.split('\n');
+        const baseX = width * normX;
+        const baseY = height * normY;
+        const lineHeight = 30;
+
+        lines.forEach((line, index) => {
+            const y = baseY + index * lineHeight;
+            const lineText = this.add.text(baseX, y, line, this.textStyle).setDepth(2).setAlpha(0);
+            const bounds = lineText.getBounds();
+            const rect = this.add.rectangle(bounds.centerX, bounds.centerY, bounds.width + 10, bounds.height + 5, 0x000000, 0.6).setDepth(1).setAlpha(0);
+            this.textLines.push(lineText);
+            this.textLineBackgrounds.push(rect);
+        });
     }
 }
