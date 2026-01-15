@@ -4,85 +4,53 @@ class GameScene extends Phaser.Scene {
     }
 
     init(data) {
-        // Level System (Scalable Design)
+        // Level System (Scalable Design) - 5 Levels total
         this.levels = [
-            {
-                id: 1,
-                bpm: 100,
-                damagePerMiss: 10,
-                tiles: [
-                    { id: 0, word: 'APPLE', expectedKey: 'A' },
-                    { id: 1, word: 'BANANA', expectedKey: 'B' },
-                    { id: 2, word: 'CHERRY', expectedKey: 'C' },
-                    { id: 3, word: 'DATE', expectedKey: 'D' },
-                    { id: 4, word: 'EGG', expectedKey: 'E' },
-                    { id: 5, word: 'FIG', expectedKey: 'F' },
-                    { id: 6, word: 'GRAPE', expectedKey: 'G' },
-                    { id: 7, word: 'HONEY', expectedKey: 'H' }
-                ]
-            },
-            {
-                id: 2,
-                bpm: 130,
-                damagePerMiss: 15,
-                tiles: [
-                    { id: 0, word: 'ICE', expectedKey: 'I' },
-                    { id: 1, word: 'JELLY', expectedKey: 'J' },
-                    { id: 2, word: 'KIWI', expectedKey: 'K' },
-                    { id: 3, word: 'LEMON', expectedKey: 'L' },
-                    { id: 4, word: 'MELON', expectedKey: 'M' },
-                    { id: 5, word: 'NUT', expectedKey: 'N' },
-                    { id: 6, word: 'ORANGE', expectedKey: 'O' },
-                    { id: 7, word: 'PEAR', expectedKey: 'P' }
-                ]
-            }
+            { id: 1, bpm: 100, sets: 3, damagePerMiss: 10, tiles: this.generateTiles(['APPLE', 'BANANA', 'CHERRY', 'DATE', 'EGG', 'FIG', 'GRAPE', 'HONEY']) },
+            { id: 2, bpm: 120, sets: 3, damagePerMiss: 12, tiles: this.generateTiles(['ICE', 'JELLY', 'KIWI', 'LEMON', 'MELON', 'NUT', 'ORANGE', 'PEAR']) },
+            { id: 3, bpm: 140, sets: 3, damagePerMiss: 15, tiles: this.generateTiles(['QUARTZ', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) },
+            { id: 4, bpm: 160, sets: 3, damagePerMiss: 18, tiles: this.generateTiles(['BREAD', 'CAKE', 'DOUGH', 'FISH', 'GUM', 'HAM', 'JAM', 'KALE']) },
+            { id: 5, bpm: 180, sets: 3, damagePerMiss: 20, tiles: this.generateTiles(['MINT', 'OAT', 'PORK', 'SAGE', 'TART', 'VINE', 'WINE', 'ZEST']) }
         ];
+
         this.currentLevelIndex = data.levelIndex || 0;
         this.currentLevel = this.levels[this.currentLevelIndex];
         
-        // Health System
+        // Health System (Resets per level, carries over per set)
         this.hp = 100;
         this.maxHp = 100;
         
         // Rhythm State
+        this.currentSet = 1;
         this.activeTileIndex = -1;
         this.lastBeatTime = 0;
         this.beatDuration = (60 / this.currentLevel.bpm) * 1000;
         this.hasTypedOnBeat = false;
         this.isGameOver = false;
-        this.score = 0;
+        this.score = data.score || 0;
+    }
+
+    generateTiles(words) {
+        return words.map((word, i) => ({
+            id: i,
+            word: word,
+            expectedKey: word[0].toUpperCase()
+        }));
     }
 
     create() {
         const { width, height } = this.scale;
 
         // Background
-        this.add.image(width / 2, height / 2, 'fridge_bg').setAlpha(0.3).setScale(Math.max(width / 800, height / 600));
+        this.add.image(width / 2, height / 2, 'fridge_bg').setAlpha(0.2).setScale(Math.max(width / 800, height / 600));
 
-        // UI - Health Bar
+        // UI
         this.createUI(width, height);
 
-        // 8 square tiles arranged in a 4x2 grid
-        this.tiles = [];
-        const gridCols = 4;
-        const gridRows = 2;
-        const tileSize = 130;
-        const spacing = 30;
-        const startX = width / 2 - ((gridCols * tileSize + (gridCols - 1) * spacing) / 2) + tileSize / 2;
-        const startY = height / 2 - ((gridRows * tileSize + (gridRows - 1) * spacing) / 2) + tileSize / 2;
+        // Tiles Grid
+        this.createGrid(width, height);
 
-        for (let i = 0; i < this.currentLevel.tiles.length; i++) {
-            const col = i % gridCols;
-            const row = Math.floor(i / gridCols);
-            const x = startX + col * (tileSize + spacing);
-            const y = startY + row * (tileSize + spacing);
-
-            const tileData = this.currentLevel.tiles[i];
-            const tile = this.createTile(x, y, tileSize, tileData);
-            this.tiles.push(tile);
-        }
-
-        // Keyboard Input
+        // Inputs
         this.input.keyboard.on('keydown', this.handleInput, this);
 
         // Feedback Text
@@ -95,247 +63,167 @@ class GameScene extends Phaser.Scene {
             strokeThickness: 8
         }).setOrigin(0.5);
 
-        // Score Text
-        this.scoreText = this.add.text(20, 60, `SCORE: ${this.score}`, {
-            fontSize: '24px',
-            fontFamily: 'Arial',
-            color: '#FFFFFF'
-        });
-
-        // Start rhythm logic
         this.lastBeatTime = this.time.now;
     }
 
     createUI(width, height) {
-        // Level Indicator
-        this.add.text(20, 20, `LEVEL ${this.currentLevel.id}`, {
-            fontSize: '28px',
-            fontFamily: 'Arial',
-            fontWeight: 'bold',
-            color: '#FFFFFF'
-        });
+        // Level & Set Info
+        this.levelText = this.add.text(20, 20, `LEVEL ${this.currentLevel.id}`, { fontSize: '28px', fontWeight: 'bold', color: '#FFFFFF' });
+        this.setText = this.add.text(20, 55, `SET ${this.currentSet}/${this.currentLevel.sets}`, { fontSize: '20px', color: '#AAAAAA' });
+        this.scoreText = this.add.text(20, 85, `SCORE: ${this.score}`, { fontSize: '20px', color: '#FFFFFF' });
 
-        // Health Bar Background
-        const barWidth = 300;
-        const barHeight = 35;
+        // Health Bar
+        const barWidth = 250;
         const barX = width - barWidth - 20;
-        const barY = 20;
-
-        this.add.rectangle(barX, barY, barWidth, barHeight, 0x333333).setOrigin(0);
-        this.hpBar = this.add.rectangle(barX, barY, barWidth, barHeight, 0x00FF00).setOrigin(0);
-        
-        this.hpText = this.add.text(barX + barWidth / 2, barY + barHeight / 2, 'HP: 100', {
-            fontSize: '18px',
-            fontFamily: 'Arial',
-            fontWeight: 'bold',
-            color: '#FFFFFF'
-        }).setOrigin(0.5);
+        this.add.rectangle(barX, 20, barWidth, 30, 0x333333).setOrigin(0);
+        this.hpBar = this.add.rectangle(barX, 20, barWidth, 30, 0x00FF00).setOrigin(0);
+        this.hpText = this.add.text(barX + barWidth / 2, 35, '100 HP', { fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF' }).setOrigin(0.5);
     }
 
-    createTile(x, y, size, data) {
-        // Placeholder frame
-        const bg = this.add.rectangle(x, y, size, size, 0x222222, 0.8);
-        bg.setStrokeStyle(4, 0x666666);
+    createGrid(width, height) {
+        this.tiles = [];
+        const gridCols = 4;
+        const tileSize = 130;
+        const spacing = 30;
+        const startX = width / 2 - ((gridCols * tileSize + (gridCols - 1) * spacing) / 2) + tileSize / 2;
+        const startY = height / 2 - (tileSize + spacing) / 2;
 
-        const label = this.add.text(x, y - 30, `Slot ${data.id + 1}`, {
-            fontSize: '16px',
-            color: '#888888',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        for (let i = 0; i < 8; i++) {
+            const col = i % gridCols;
+            const row = Math.floor(i / gridCols);
+            const x = startX + col * (tileSize + spacing);
+            const y = startY + row * (tileSize + spacing);
 
-        const wordText = this.add.text(x, y + 10, data.word, {
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#FFFFFF',
-            fontFamily: 'Arial'
-        }).setOrigin(0.5);
+            const tileData = this.currentLevel.tiles[i];
+            
+            const bg = this.add.rectangle(x, y, tileSize, tileSize, 0x222222, 0.8).setStrokeStyle(4, 0x666666);
+            const word = this.add.text(x, y + 10, tileData.word, { fontSize: '22px', fontWeight: 'bold', color: '#FFFFFF' }).setOrigin(0.5);
+            const key = this.add.text(x, y + 40, `[${tileData.expectedKey}]`, { fontSize: '16px', color: '#FFFF00' }).setOrigin(0.5);
+            const label = this.add.text(x, y - 35, `Slot ${i + 1}`, { fontSize: '14px', color: '#888888' }).setOrigin(0.5);
 
-        const keyText = this.add.text(x, y + 40, `[${data.expectedKey}]`, {
-            fontSize: '18px',
-            color: '#FFFF00',
-            fontFamily: 'Courier New'
-        }).setOrigin(0.5);
-
-        return { bg, label, wordText, keyText, data };
+            this.tiles.push({ bg, word, key, label, data: tileData });
+        }
     }
 
-    update(time, delta) {
+    update(time) {
         if (this.isGameOver) return;
 
-        // Rhythm evaluation
         if (time - this.lastBeatTime >= this.beatDuration) {
-            // New Beat
             if (this.activeTileIndex !== -1 && !this.hasTypedOnBeat) {
-                this.showFeedback('Miss', '#FF0000');
-                this.reduceHealth(this.currentLevel.damagePerMiss);
+                this.handleMiss();
             }
 
             this.lastBeatTime = time;
-            this.activeTileIndex = (this.activeTileIndex + 1) % this.tiles.length;
+            this.activeTileIndex++;
             this.hasTypedOnBeat = false;
 
-            // Highlight new tile
-            this.tiles.forEach((tile, index) => {
-                if (index === this.activeTileIndex) {
-                    this.tweens.add({
-                        targets: tile.bg,
-                        scale: 1.15,
-                        duration: 100,
-                        yoyo: true,
-                        ease: 'Back.easeOut'
-                    });
-                    tile.bg.setFillStyle(0x4444FF);
-                    tile.bg.setStrokeStyle(6, 0xFFFFFF);
-                } else {
-                    tile.bg.setFillStyle(0x222222);
-                    tile.bg.setStrokeStyle(4, 0x666666);
-                    tile.bg.setScale(1.0);
-                }
-            });
+            if (this.activeTileIndex >= this.tiles.length) {
+                this.completeSet();
+                return;
+            }
+
+            this.highlightTile(this.activeTileIndex);
         }
+    }
+
+    highlightTile(index) {
+        this.tiles.forEach((tile, i) => {
+            if (i === index) {
+                tile.bg.setFillStyle(0x4444FF).setStrokeStyle(6, 0xFFFFFF).setScale(1.1);
+            } else {
+                tile.bg.setFillStyle(0x222222).setStrokeStyle(4, 0x666666).setScale(1.0);
+            }
+        });
     }
 
     handleInput(event) {
-        if (this.isGameOver || this.activeTileIndex === -1 || this.hasTypedOnBeat) return;
+        if (this.isGameOver || this.activeTileIndex < 0 || this.hasTypedOnBeat) return;
 
-        const typedKey = event.key.toUpperCase();
-        const expectedKey = this.currentLevel.tiles[this.activeTileIndex].expectedKey;
+        const typed = event.key.toUpperCase();
+        const expected = this.currentLevel.tiles[this.activeTileIndex].expectedKey;
+        const timing = (this.time.now - this.lastBeatTime) / this.beatDuration;
         
-        const timeSinceBeat = this.time.now - this.lastBeatTime;
-        const timingRatio = timeSinceBeat / this.beatDuration;
-
         this.hasTypedOnBeat = true;
 
-        if (typedKey === expectedKey) {
-            // Correct key
-            if (timingRatio < 0.25 || timingRatio > 0.75) {
-                this.showFeedback('PERFECT', '#00FF00');
-                this.score += 100;
-            } else {
-                this.showFeedback('GREAT', '#FFFF00');
-                this.score += 50;
-            }
-            this.scoreText.setText(`SCORE: ${this.score}`);
-            
-            // Visual success on tile - DIAGONAL SHAKE AND PULSE
-            const activeTile = this.tiles[this.activeTileIndex];
-            const targets = [activeTile.bg, activeTile.wordText, activeTile.keyText, activeTile.label];
-            
-            this.tweens.add({
-                targets: targets,
-                x: '+=6',
-                y: '-=6',
-                duration: 40,
-                yoyo: true,
-                repeat: 2,
-                ease: 'Sine.easeInOut'
-            });
-
-            this.time.delayedCall(40, () => {
-                this.tweens.add({
-                    targets: targets,
-                    x: '-=6',
-                    y: '-=6',
-                    duration: 40,
-                    yoyo: true,
-                    repeat: 2,
-                    ease: 'Sine.easeInOut'
-                });
-            });
-
-            this.tweens.add({
-                targets: activeTile.bg,
-                alpha: 0.5,
-                duration: 100,
-                yoyo: true
-            });
+        if (typed === expected) {
+            this.handleSuccess(timing);
         } else {
-            // Wrong key
-            this.showFeedback('WRONG KEY', '#FF0000');
-            this.reduceHealth(this.currentLevel.damagePerMiss);
+            this.handleError('WRONG KEY');
         }
     }
 
-    showFeedback(text, color) {
-        this.feedbackText.setText(text);
-        this.feedbackText.setColor(color);
-        this.feedbackText.setAlpha(1);
-        this.feedbackText.setScale(1.5);
-        
-        this.tweens.add({
-            targets: this.feedbackText,
-            alpha: 0,
-            scale: 1,
-            y: this.feedbackText.y - 40,
-            duration: 400,
-            onComplete: () => {
-                this.feedbackText.y += 40;
-            }
-        });
+    handleSuccess(timing) {
+        const isPerfect = timing < 0.25 || timing > 0.8;
+        this.showFeedback(isPerfect ? 'PERFECT' : 'GREAT', isPerfect ? '#00FF00' : '#FFFF00');
+        this.score += isPerfect ? 100 : 50;
+        this.scoreText.setText(`SCORE: ${this.score}`);
+        this.shakeTile(this.activeTileIndex);
+        // Audio would go here: this.sound.play('chirp');
+    }
+
+    handleError(msg) {
+        this.showFeedback(msg, '#FF0000');
+        this.reduceHealth(this.currentLevel.damagePerMiss);
+        // Audio would go here: this.sound.play('error');
+    }
+
+    handleMiss() {
+        this.handleError('MISS');
+    }
+
+    shakeTile(index) {
+        const tile = this.tiles[index];
+        const targets = [tile.bg, tile.word, tile.key, tile.label];
+        this.tweens.add({ targets, x: '+=6', y: '-=6', duration: 40, yoyo: true, repeat: 2 });
     }
 
     reduceHealth(amount) {
         this.hp = Math.max(0, this.hp - amount);
-        const ratio = this.hp / this.maxHp;
-        
-        this.tweens.add({
-            targets: this.hpBar,
-            width: 300 * ratio,
-            duration: 200,
-            ease: 'Power2'
-        });
+        this.hpBar.width = 250 * (this.hp / 100);
+        this.hpText.setText(`${this.hp} HP`);
+        this.cameras.main.shake(100, 0.01);
+        if (this.hp <= 0) this.triggerGameOver();
+    }
 
-        this.hpText.setText(`HP: ${this.hp}`);
-
-        if (this.hp <= 30) {
-            this.hpBar.setFillStyle(0xFF0000);
-        } else if (this.hp <= 60) {
-            this.hpBar.setFillStyle(0xFFFF00);
+    completeSet() {
+        this.currentSet++;
+        if (this.currentSet > this.currentLevel.sets) {
+            this.completeLevel();
+        } else {
+            this.activeTileIndex = -1;
+            this.setText.setText(`SET ${this.currentSet}/${this.currentLevel.sets}`);
         }
+    }
 
-        // Screen shake on damage
-        this.cameras.main.shake(150, 0.01);
-
-        if (this.hp <= 0) {
-            this.triggerGameOver();
+    completeLevel() {
+        this.currentLevelIndex++;
+        if (this.currentLevelIndex >= this.levels.length) {
+            this.showEnding();
+        } else {
+            this.scene.restart({ levelIndex: this.currentLevelIndex, score: this.score });
         }
+    }
+
+    showFeedback(text, color) {
+        this.feedbackText.setText(text).setColor(color).setAlpha(1).setScale(1.2);
+        this.tweens.add({ targets: this.feedbackText, alpha: 0, y: '-=30', duration: 400 });
     }
 
     triggerGameOver() {
         this.isGameOver = true;
-        const { width, height } = this.scale;
+        this.add.rectangle(0, 0, 800, 600, 0x000000, 0.8).setOrigin(0);
+        this.add.text(400, 250, 'GAME OVER', { fontSize: '64px', fontWeight: 'bold', color: '#FF0000' }).setOrigin(0.5);
+        const btn = this.add.text(400, 350, 'RESTART', { fontSize: '32px', color: '#FFFFFF', backgroundColor: '#444444', padding: 15 }).setOrigin(0.5).setInteractive();
+        btn.on('pointerdown', () => this.scene.restart({ levelIndex: 0, score: 0 }));
+    }
 
-        this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-
-        this.add.text(width / 2, height / 2 - 80, 'GAME OVER', {
-            fontSize: '84px',
-            fontFamily: 'Comic Sans MS',
-            fontWeight: 'bold',
-            color: '#FF0000',
-            stroke: '#FFFFFF',
-            strokeThickness: 4
-        }).setOrigin(0.5);
-
-        this.add.text(width / 2, height / 2, `FINAL SCORE: ${this.score}`, {
-            fontSize: '32px',
-            fontFamily: 'Arial',
-            color: '#FFFFFF'
-        }).setOrigin(0.5);
-
-        const restartButton = this.add.text(width / 2, height / 2 + 100, 'TRY AGAIN', {
-            fontSize: '32px',
-            fontFamily: 'Arial',
-            fontWeight: 'bold',
-            color: '#FFFFFF',
-            backgroundColor: '#FF0000',
-            padding: { x: 30, y: 15 }
-        }).setOrigin(0.5).setInteractive();
-
-        restartButton.on('pointerover', () => restartButton.setScale(1.1));
-        restartButton.on('pointerout', () => restartButton.setScale(1.0));
-
-        restartButton.on('pointerdown', () => {
-            this.scene.restart();
-        });
+    showEnding() {
+        this.isGameOver = true;
+        this.add.rectangle(0, 0, 800, 600, 0x000000, 0.9).setOrigin(0);
+        this.add.text(400, 200, 'CHALLENGE COMPLETE', { fontSize: '48px', fontWeight: 'bold', color: '#FFFF00' }).setOrigin(0.5);
+        this.add.text(400, 280, `FINAL SCORE: ${this.score}`, { fontSize: '32px', color: '#FFFFFF' }).setOrigin(0.5);
+        this.add.text(400, 350, 'You got Maya\'s attention!', { fontSize: '24px', color: '#00FF00' }).setOrigin(0.5);
+        const btn = this.add.text(400, 450, 'PLAY AGAIN', { fontSize: '28px', color: '#FFFFFF', backgroundColor: '#222222', padding: 15 }).setOrigin(0.5).setInteractive();
+        btn.on('pointerdown', () => this.scene.start('TitleScene'));
     }
 }
