@@ -139,8 +139,8 @@ class StoryScene extends Phaser.Scene {
 
     advanceCard() {
         if (this.currentIndex >= this.cards.length - 1) {
-            // End of story -> start main game
-            this.scene.start('GameScene');
+            // End of story -> start main game at Level 1
+            this.scene.start('GameScene', { levelIndex: 0, score: 0 });
             return;
         }
 
