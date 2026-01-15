@@ -217,15 +217,30 @@ class GameScene extends Phaser.Scene {
             }
             this.scoreText.setText(`SCORE: ${this.score}`);
             
-            // Visual success on tile - SHAKE AND PULSE
+            // Visual success on tile - DIAGONAL SHAKE AND PULSE
             const activeTile = this.tiles[this.activeTileIndex];
+            const targets = [activeTile.bg, activeTile.wordText, activeTile.keyText, activeTile.label];
+            
             this.tweens.add({
-                targets: [activeTile.bg, activeTile.wordText, activeTile.keyText, activeTile.label],
-                x: '+=5',
-                duration: 50,
+                targets: targets,
+                x: '+=6',
+                y: '-=6',
+                duration: 40,
                 yoyo: true,
-                repeat: 3,
+                repeat: 2,
                 ease: 'Sine.easeInOut'
+            });
+
+            this.time.delayedCall(40, () => {
+                this.tweens.add({
+                    targets: targets,
+                    x: '-=6',
+                    y: '-=6',
+                    duration: 40,
+                    yoyo: true,
+                    repeat: 2,
+                    ease: 'Sine.easeInOut'
+                });
             });
 
             this.tweens.add({
