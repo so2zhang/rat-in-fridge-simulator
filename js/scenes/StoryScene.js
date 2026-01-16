@@ -20,7 +20,7 @@ class StoryScene extends Phaser.Scene {
             {
                 key: 'card1_dorm',
                 textX: 0.05,
-                textY: 0.1,
+                texNtY: 0.1,
                 text:
                     'Tuesday night. Maya’s dorm.\n' +
                     'Another study session, \n' +
@@ -139,8 +139,8 @@ class StoryScene extends Phaser.Scene {
 
     advanceCard() {
         if (this.currentIndex >= this.cards.length - 1) {
-            // End of story -> start main game at Level 1
-            this.scene.start('GameScene', { levelIndex: 0, score: 0 });
+            // End of story -> show instructions before gameplay
+            this.scene.start('InstructionsScene');
             return;
         }
 

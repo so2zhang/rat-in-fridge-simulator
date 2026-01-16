@@ -6,7 +6,7 @@ class GameScene extends Phaser.Scene {
     /**
      * Level System Initialization: Defines the progression, BPM, and difficulty.
      * To change the rhythm/difficulty:
-     * - Adjust 'bpm': Higher is faster.
+     * - Adjust 'bpm': Higher is faster. 
      * - Adjust 'sets': Number of grid rounds per level.
      * - Adjust 'damagePerMiss': Health penalty for errors.
      */
@@ -14,11 +14,41 @@ class GameScene extends Phaser.Scene {
         // Level System (Scalable Design) - 5 Levels total
         // Balanced BPM: 90 to 140 instead of 100 to 180
         this.levels = [
-            { id: 1, bpm: 90, sets: 3, damagePerMiss: 10, tiles: this.getPool(['APPLE', 'BANANA', 'CHERRY', 'DATE', 'EGG', 'FIG', 'GRAPE', 'HONEY']) },
-            { id: 2, bpm: 105, sets: 3, damagePerMiss: 12, tiles: this.getPool(['ICE', 'JELLY', 'KIWI', 'LEMON', 'MELON', 'NUT', 'ORANGE', 'PEAR']) },
-            { id: 3, bpm: 120, sets: 3, damagePerMiss: 14, tiles: this.getPool(['RADISH', 'RICE', 'SALT', 'TOFU', 'UDON', 'VEAL', 'WHEY', 'YAM']) },
-            { id: 4, bpm: 130, sets: 3, damagePerMiss: 16, tiles: this.getPool(['BREAD', 'CAKE', 'DOUGH', 'FISH', 'GUM', 'HAM', 'JAM', 'KALE']) },
-            { id: 5, bpm: 140, sets: 3, damagePerMiss: 18, tiles: this.getPool(['MINT', 'OAT', 'PORK', 'SAGE', 'TART', 'VINE', 'WINE', 'ZEST']) }
+            {
+                id: 1,
+                bpm: 90,
+                sets: 2,
+                damagePerMiss: 10,
+                tiles: this.getPool(['COLD', 'NUMB', 'WEAK', 'TIRED', 'SLOW', 'FAINT', 'DARK', 'LOST'])
+            },
+            {
+                id: 2,
+                bpm: 100,
+                sets: 2,
+                damagePerMiss: 12,
+                tiles: this.getPool(['SHAKE', 'MOVE', 'PUSH', 'TRY', 'FIGHT', 'STAY', 'LIVE', 'HOLD'])
+            },
+            {
+                id: 3,
+                bpm: 110,
+                sets: 2,
+                damagePerMiss: 14,
+                tiles: this.getPool(['NOISE', 'SOUND', 'KNOCK', 'BANG', 'CRASH', 'THUMP', 'LOUD', 'HEAR'])
+            },
+            {
+                id: 4,
+                bpm: 120,
+                sets: 2,
+                damagePerMiss: 16,
+                tiles: this.getPool(['VOICE', 'STEPS', 'NEAR', 'CLOSE', 'MAYA', 'HERE', 'WAIT', 'LOOK'])
+            },
+            {
+                id: 5,
+                bpm: 130,
+                sets: 2,
+                damagePerMiss: 18,
+                tiles: this.getPool(['LIGHT', 'OPEN', 'FREE', 'WARM', 'SAFE', 'FOUND', 'YES', 'HOME'])
+            }
         ];
 
         this.currentLevelIndex = data.levelIndex || 0;
@@ -38,6 +68,7 @@ class GameScene extends Phaser.Scene {
         this.beatDuration = (60 / this.currentLevel.bpm) * 1000;
         this.hasTypedOnBeat = false;
         this.isGameOver = false;
+        this.isBetweenLevels = false;
         this.score = data.score || 0;
     }
 
@@ -58,6 +89,11 @@ class GameScene extends Phaser.Scene {
     }
 
     create() {
+        // Ensure level state is active after any restart
+        this.isBetweenLevels = false;
+        this.activeTileIndex = -1;
+        this.hasTypedOnBeat = false;
+
         const { width, height } = this.scale;
 
         // Background
@@ -87,7 +123,18 @@ class GameScene extends Phaser.Scene {
         this.metroBall.setScale(0.3);
         this.metroBall.setAlpha(0); // Hidden until game starts
 
-        this.lastBeatTime = this.time.now;
+        // Kick off the first beat immediately after restart
+        this.activeTileIndex = -1;
+        this.startBeat();
+    }
+
+    startBeat() {
+        // Reset beat timing so the next update immediately starts on tile 0
+        this.isBetweenLevels = false;
+        this.activeTileIndex = -1;
+        this.hasTypedOnBeat = false;
+        this.lastBeatTime = this.time.now - this.beatDuration;
+        this.metroBall.setAlpha(0);
     }
 
     /**
@@ -151,14 +198,20 @@ class GameScene extends Phaser.Scene {
     }
 
     update(time) {
-        if (this.isGameOver) return;
+        // DEBUG: Show what's happening
+        if (this.debugText) {
+            this.debugText.setText(`IDX:${this.activeTileIndex} BTW:${this.isBetweenLevels} GO:${this.isGameOver} BD:${Math.round(this.beatDuration)}`);
+        }
+
+        if (this.isGameOver || this.isBetweenLevels) return;
 
         // Update Bouncing Ball Metronome
         if (this.activeTileIndex >= 0 && this.activeTileIndex < this.tiles.length) {
             this.metroBall.setAlpha(1);
             const currentTile = this.tiles[this.activeTileIndex];
             
-            // If there's a next tile, interpolate between them
+            // If there's a next tile, interpolate bet
+            // ween them
             if (this.activeTileIndex + 1 < this.tiles.length) {
                 const nextTile = this.tiles[this.activeTileIndex + 1];
                 const progress = (time - this.lastBeatTime) / this.beatDuration;
@@ -210,7 +263,7 @@ class GameScene extends Phaser.Scene {
     }
 
     handleInput(event) {
-        if (this.isGameOver || this.activeTileIndex < 0 || this.hasTypedOnBeat) return;
+        if (this.isGameOver || this.isBetweenLevels || this.activeTileIndex < 0 || this.hasTypedOnBeat) return;
 
         const typed = event.key.toUpperCase();
         const expected = this.activeTileSet[this.activeTileIndex].expectedKey;
@@ -251,6 +304,7 @@ class GameScene extends Phaser.Scene {
     }
 
     reduceHealth(amount) {
+        if (this.isBetweenLevels) return;
         this.hp = Math.max(0, this.hp - amount);
         this.hpBar.width = 250 * (this.hp / 100);
         this.hpText.setText(`${this.hp} HP`);
@@ -267,16 +321,81 @@ class GameScene extends Phaser.Scene {
             this.activeTileSet = this.shuffleArray([...this.currentLevel.tiles]);
             this.updateTiles();
             this.setText.setText(`SET ${this.currentSet}/${this.currentLevel.sets}`);
+            this.startBeat();
         }
     }
 
     completeLevel() {
+        this.isBetweenLevels = true;
+        this.showLevelDialogue();
         this.currentLevelIndex++;
-        if (this.currentLevelIndex >= this.levels.length) {
-            this.showEnding();
-        } else {
-            this.scene.restart({ levelIndex: this.currentLevelIndex, score: this.score });
-        }
+
+        this.time.delayedCall(4000, () => {
+            if (this.currentLevelIndex >= this.levels.length) {
+                this.showEnding();
+            } else {
+                this.scene.restart({ levelIndex: this.currentLevelIndex, score: this.score });
+            }
+        });
+    }
+
+    showLevelDialogue() {
+        const { width, height } = this.scale;
+
+        // Dialogue that shows after each level completes
+        const dialogues = [
+            null, // No dialogue before level 1 (game just started)
+            'Noodle forces himself to move... barely.\nFaint scratching. Too quiet for Maya to hear.',
+            'He won\'t give up. He pushes harder.\nThe sounds get louder. Is anyone listening?\n\nFrom outside: "Hmm... did I hear something?"',
+            'Someone\'s out there. He can feel it.\nHe knocks harder. Bang. Crash. HEAR ME.\n\nMaya\'s voice: "That\'s coming from the fridge..."',
+            'That\'s her voice! She\'s close!\nKeep going! Don\'t stop! She\'s RIGHT THERE!\n\nMaya: "Something is definitely in there. Is someone in my fridge?!"',
+            'The door handle moves. Light creeps in.\nShe\'s opening it. She found him.\n\nMaya: "NOODLE?! OH MY GOD!"'
+        ];
+
+        const dialogueText = dialogues[this.currentLevel.id];
+        if (!dialogueText) return;
+
+        // Create semi-transparent overlay
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
+            .setOrigin(0)
+            .setDepth(100);
+
+        // Split text to highlight Maya's dialogue in different color
+        const lines = dialogueText.split('\n');
+        let yOffset = height / 2 - (lines.length * 15);
+
+        const textObjects = [];
+        lines.forEach((line) => {
+            const isMayaLine = line.includes('Maya') || line.includes('From outside:');
+            const color = isMayaLine ? '#FFD700' : '#FFFFFF';
+            const fontSize = isMayaLine ? '22px' : '24px';
+
+            const text = this.add.text(width / 2, yOffset, line, {
+                fontSize: fontSize,
+                fontFamily: 'Comic Sans MS',
+                fontStyle: isMayaLine ? 'normal' : 'italic',
+                fontWeight: isMayaLine ? 'bold' : 'normal',
+                color: color,
+                align: 'center',
+                lineSpacing: 8
+            }).setOrigin(0.5).setDepth(101);
+
+            textObjects.push(text);
+            yOffset += 35;
+        });
+
+        // Hold for 3.5 seconds, then fade out
+        this.time.delayedCall(3500, () => {
+            this.tweens.add({
+                targets: [overlay, ...textObjects],
+                alpha: 0,
+                duration: 500,
+                onComplete: () => {
+                    overlay.destroy();
+                    textObjects.forEach(t => t.destroy());
+                }
+            });
+        });
     }
 
     showFeedback(text, color) {
@@ -286,6 +405,7 @@ class GameScene extends Phaser.Scene {
     }
 
     triggerGameOver() {
+        if (this.isBetweenLevels) return;
         this.isGameOver = true;
         this.add.rectangle(0, 0, 800, 600, 0x000000, 0.8).setOrigin(0);
         this.add.text(400, 250, 'GAME OVER', { fontSize: '64px', fontFamily: 'Comic Sans MS', fontWeight: 'bold', color: '#FF0000' }).setOrigin(0.5);
@@ -310,6 +430,11 @@ class EndingStoryScene extends Phaser.Scene {
         super({ key: 'EndingStoryScene' });
     }
 
+    preload() {
+        // Ensure the ending background is available
+        this.load.image('win', 'assets/images/win.png');
+    }
+
     create() {
         const { width, height } = this.scale;
 
@@ -325,14 +450,14 @@ class EndingStoryScene extends Phaser.Scene {
                     'He made it.'
             },
             {
-                key: 'card1_dorm',
+                key: 'win',
                 textX: 0.05,
-                textY: 0.8,
+                textY: 0.75,
                 text:
                     'Back in the dorm.\n' +
                     'Warm blankets. Insulin.\n' +
-                    'Noodle curls up by the pasta bowl.\n' +
-                    'A well-deserved nap.'
+                    'Noodle cuddles up with Maya.\n' +
+                    'Life is good again.'
             }
         ];
 
